@@ -4,8 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-**Specs only — no code, no `package.json`, not yet a git repository.** Everything below Phase 0 of
-`docs/implement-plan.md` is unbuilt. Commands in the next section will not run until Phase 0 lands.
+**Phase 0 landed: repository, toolchain, lint zones, hooks, CI and ADRs.** `src/` holds a
+placeholder shell only. Everything from Phase 1 of `docs/implement-plan.md` onward is unbuilt —
+no `src/core/`, no `api/chat.ts`, no tests. `pnpm test` and `pnpm test:e2e` arrive with their
+subjects in Phases 1 and 6.
 
 The three documents in `docs/` are the source of truth, not decoration. Read them before writing
 code; they specify behaviour at a level that determines implementation:
@@ -16,16 +18,18 @@ code; they specify behaviour at a level that determines implementation:
 | `docs/DESIGN-SYSTEM.md`    | Tokens, components, the six required states, lint-enforced rules |
 | `docs/implement-plan.md`   | Phased execution plan with per-phase verification                |
 
-## Commands (planned — Phase 0 creates these)
+## Commands
 
 ```
-pnpm dev             # Vite dev server; also mounts the API proxy at /api/chat
+pnpm dev             # Vite dev server; will also mount the API proxy at /api/chat (Phase 2)
 pnpm typecheck       # tsc --noEmit
 pnpm lint            # ESLint (includes import-boundary and design-system rules)
-pnpm test            # Vitest
+pnpm format          # prettier --check .  (format:write to fix)
+pnpm build           # typecheck, then vite build
+
+pnpm test            # Vitest      — added in Phase 1
 pnpm test <pattern>  # single file, e.g. pnpm test sse
-pnpm test:e2e        # Playwright
-pnpm build
+pnpm test:e2e        # Playwright  — added in Phase 6
 ```
 
 Package manager is pnpm. Node version pinned in `.nvmrc`.
