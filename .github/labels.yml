@@ -1,0 +1,10 @@
+# Applied with: gh label create <name> --color <color> --description <description>
+- name: bug
+  color: d73a4a
+  description: Something behaves incorrectly
+- name: feature
+  color: 0e8a16
+  description: New capability
+- name: tech-debt
+  color: fbca04
+  description: Known shortcut, with the reasoning recorded on the issue
