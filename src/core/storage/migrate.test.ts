@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { migrate, runMigrations } from './migrate';
+import type { MigrationMap } from './migrations';
 import {
   CURRENT_VERSION,
   emptyDocument,
   isCurrentDocument,
-  migrate,
-  runMigrations,
-  type MigrationMap,
   type VersionedDocument,
-} from './migrate';
+} from './schema';
 
 const message = (overrides: Record<string, unknown> = {}) => ({
   id: 'm1',
