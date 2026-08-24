@@ -4,11 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-**Phases 0 and 1 landed.** Repository, toolchain, lint zones, hooks, CI, ADRs — and `src/core/`:
-SSE framing, event classification, error classification and retry policy, storage schema and
-migration harness, all under test. `src/ui/` is still a placeholder shell. Everything from Phase 2
-of `docs/implement-plan.md` onward is unbuilt — no `api/chat.ts`, no `src/adapter/`, no `src/app/`.
-`pnpm test:e2e` arrives with its subject in Phase 6.
+**Phases 0-2 landed, plus the adapter from Phase 3.** Repository, toolchain, lint zones, hooks,
+CI, ADRs; `src/core/` (SSE framing, event classification, error classification and retry policy,
+storage schema and migration harness); `api/chat.ts` (the proxy, mounted locally by a Vite plugin);
+and `src/adapter/` (`transport.ts`, `storage.ts`). All under test. `src/ui/` is still a placeholder
+shell and `src/app/` is unbuilt — the hooks, render scheduling and conversation-id guard from
+Phase 3 remain. `pnpm test:e2e` arrives with its subject in Phase 6.
 
 The three documents in `docs/` are the source of truth, not decoration. Read them before writing
 code; they specify behaviour at a level that determines implementation:
@@ -45,8 +46,9 @@ convention.
 
 ```
 src/ui/       Presentation. React + Chakra. No fetch, no parsing.
-src/app/      Hooks. Lifecycle, cancellation, render scheduling.
-src/adapter/  HTTP, AbortSignal, byte decoding, localStorage driver.
+src/app/      Hooks. Lifecycle, cancellation, render scheduling.        (unbuilt)
+src/adapter/  transport.ts — fetch, AbortSignal, TextDecoderStream, frames out.
+              storage.ts   — localStorage driver over core's migrate().
 src/core/     Pure functions. Parsing, classification, migrations.
 api/chat.ts   Serverless proxy. Holds the credential.
 ```
@@ -124,6 +126,9 @@ These were verified against live sources — do not re-research or guess at them
 - Tests assert behaviour, never implementation detail. The mocked transport reproduces adverse
   conditions deliberately — one-byte chunks, split delimiters, keepalives, mid-stream errors,
   truncated streams.
+- Comments are sparse and explain **why**, not what. No doc block on every constant or field, no
+  multi-paragraph module essays. Keep rationale, platform quirks, security constraints and ADR
+  references; delete anything that restates the code.
 - Architectural decisions go in `docs/adr/` with context, options, decision and **consequences
   accepted**.
 - Content style: sentence case; buttons name the action ("Send", not "Submit"); errors state what
