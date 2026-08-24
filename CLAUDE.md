@@ -4,12 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-**Phases 0-2 landed, plus the adapter from Phase 3.** Repository, toolchain, lint zones, hooks,
-CI, ADRs; `src/core/` (SSE framing, event classification, error classification and retry policy,
-storage schema and migration harness); `api/chat.ts` (the proxy, mounted locally by a Vite plugin);
-and `src/adapter/` (`transport.ts`, `storage.ts`). All under test. `src/ui/` is still a placeholder
-shell and `src/app/` is unbuilt — the hooks, render scheduling and conversation-id guard from
-Phase 3 remain. `pnpm test:e2e` arrives with its subject in Phase 6.
+**Phases 0-3 landed.** Repository, toolchain, lint zones, hooks, CI, ADRs; `src/core/` (SSE
+framing, event classification, error classification and retry policy, storage schema and migration
+harness); `api/chat.ts` (the proxy, mounted locally by a Vite plugin); `src/adapter/`
+(`transport.ts`, `storage.ts`); and `src/app/useChatStream.ts` (lifecycle, cancellation, bounded
+retry, frame-scheduled rendering, conversation-id guard). All under test. `src/ui/` is still a
+placeholder shell — Phase 4 builds the presentation layer. `pnpm test:e2e` arrives with its
+subject in Phase 6.
 
 The three documents in `docs/` are the source of truth, not decoration. Read them before writing
 code; they specify behaviour at a level that determines implementation:
@@ -46,7 +47,7 @@ convention.
 
 ```
 src/ui/       Presentation. React + Chakra. No fetch, no parsing.
-src/app/      Hooks. Lifecycle, cancellation, render scheduling.        (unbuilt)
+src/app/      useChatStream.ts — lifecycle, cancellation, retry, render scheduling.
 src/adapter/  transport.ts — fetch, AbortSignal, TextDecoderStream, frames out.
               storage.ts   — localStorage driver over core's migrate().
 src/core/     Pure functions. Parsing, classification, migrations.
