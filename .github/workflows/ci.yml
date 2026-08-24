@@ -50,6 +50,22 @@ jobs:
       - run: pnpm lint
       - run: pnpm format
 
+  test:
+    name: Unit + integration, coverage
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm test:coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/lcov.info
+          if-no-files-found: ignore
+
   build:
     name: Build
     needs: changes
@@ -71,5 +87,5 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm exec commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
-# Tests with coverage, bundle budget, E2E and accessibility are added in Phases 1 and 6, alongside
-# the code they guard, so the default branch is never knowingly red (implement-plan §4).
+# Bundle budget, E2E and accessibility are added in Phase 6, alongside the code they guard, so the
+# default branch is never knowingly red (implement-plan §4).

@@ -4,10 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-**Phase 0 landed: repository, toolchain, lint zones, hooks, CI and ADRs.** `src/` holds a
-placeholder shell only. Everything from Phase 1 of `docs/implement-plan.md` onward is unbuilt —
-no `src/core/`, no `api/chat.ts`, no tests. `pnpm test` and `pnpm test:e2e` arrive with their
-subjects in Phases 1 and 6.
+**Phases 0 and 1 landed.** Repository, toolchain, lint zones, hooks, CI, ADRs — and `src/core/`:
+SSE framing, event classification, error classification and retry policy, storage schema and
+migration harness, all under test. `src/ui/` is still a placeholder shell. Everything from Phase 2
+of `docs/implement-plan.md` onward is unbuilt — no `api/chat.ts`, no `src/adapter/`, no `src/app/`.
+`pnpm test:e2e` arrives with its subject in Phase 6.
 
 The three documents in `docs/` are the source of truth, not decoration. Read them before writing
 code; they specify behaviour at a level that determines implementation:
@@ -27,8 +28,10 @@ pnpm lint            # ESLint (includes import-boundary and design-system rules)
 pnpm format          # prettier --check .  (format:write to fix)
 pnpm build           # typecheck, then vite build
 
-pnpm test            # Vitest      — added in Phase 1
+pnpm test            # Vitest, run once
 pnpm test <pattern>  # single file, e.g. pnpm test sse
+pnpm test:watch      # Vitest, watching
+pnpm test:coverage   # thresholds on core/ and adapter/ only (ADR-0005)
 pnpm test:e2e        # Playwright  — added in Phase 6
 ```
 
