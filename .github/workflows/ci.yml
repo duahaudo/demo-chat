@@ -85,28 +85,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/playwright
-      - run: pnpm test:e2e --grep-invert @a11y
+      - run: pnpm test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-report-e2e
-          path: playwright-report
-          if-no-files-found: ignore
-
-  a11y:
-    name: Accessibility audit
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - uses: ./.github/actions/playwright
-      - run: pnpm test:e2e --grep @a11y
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report-a11y
           path: playwright-report
           if-no-files-found: ignore
 

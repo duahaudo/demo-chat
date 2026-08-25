@@ -42,7 +42,7 @@ pnpm format          # prettier --check .  (format:write to fix)
 
 pnpm test            # Vitest: unit, integration and component
 pnpm test:coverage   # thresholds on core/ and adapter/ (ADR-0005)
-pnpm test:e2e        # Playwright journeys and the accessibility audit
+pnpm test:e2e        # Playwright journeys
 pnpm bundle:budget   # initial JS against bundle-budget.json, after a build
 ```
 
@@ -66,13 +66,12 @@ and same variables in both, with no `vercel dev` dependency.
 
 ## Testing
 
-| Level         | Where                      | What it proves                                |
-| ------------- | -------------------------- | --------------------------------------------- |
-| Unit          | `src/core/`                | Correct at every boundary case                |
-| Integration   | `src/adapter/`, `src/app/` | Streams, cancellation, errors work end to end |
-| Component     | `src/ui/`                  | The six states render and announce            |
-| E2E           | `e2e/`                     | The product works in a browser                |
-| Accessibility | `e2e/a11y.spec.ts`         | Contrast, focus, roles, on key screens        |
+| Level       | Where                      | What it proves                                |
+| ----------- | -------------------------- | --------------------------------------------- |
+| Unit        | `src/core/`                | Correct at every boundary case                |
+| Integration | `src/adapter/`, `src/app/` | Streams, cancellation, errors work end to end |
+| Component   | `src/ui/`                  | The six states render and announce            |
+| E2E         | `e2e/`                     | The product works in a browser                |
 
 The mocked transport reproduces adverse conditions deliberately: one-byte chunks, split
 delimiters, keepalives, mid-stream errors, truncated streams. E2E runs against the production
@@ -82,7 +81,7 @@ non-deterministic, to drive a test suite.
 ## Pipeline
 
 Independent jobs, so a failure names its own cause: type check, lint and format, unit tests with
-coverage, build, bundle budget (commented on the pull request), E2E, accessibility audit, secret
+coverage, build, bundle budget (commented on the pull request), E2E, secret
 scan including "no key in build output", and reported-only code and dependency scanning. Docs-only
 changes skip the heavy jobs.
 
