@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-**Phases 0-4 landed.** Repository, toolchain, lint zones, hooks, CI, ADRs; `src/core/` (SSE
+**Phases 0-5 landed.** Repository, toolchain, lint zones, hooks, CI, ADRs; `src/core/` (SSE
 framing, event classification, error classification and retry policy, storage schema and migration
 harness); `api/chat.ts` (the proxy, mounted locally by a Vite plugin); `src/adapter/`
-(`transport.ts`, `storage.ts`); `src/app/` (`useChatStream.ts`, `useConversations.ts`); and
-`src/ui/` (`App`, `Transcript`, `MessageBubble`, `Composer`, `ChatListItem` — the six states, all
-under component test). All under test. Conversations are in memory only: Phase 5 puts the
-`localStorage` driver and a router behind `useConversations`, and adds inline rename and delete.
-`pnpm test:e2e` arrives with its subject in Phase 6.
+(`transport.ts`, `storage.ts`); `src/app/` (`useChatStream.ts`, `useConversations.ts` — persistence
+and routing behind the same surface); and `src/ui/` (`App`, `Transcript`, `MessageBubble`,
+`Composer`, `ChatListItem` — the six states, all under component test). Conversations persist to
+`localStorage`, are addressed by the URL fragment, and can be renamed inline or deleted with
+confirmation. All under test. `pnpm test:e2e` arrives with its subject in Phase 6.
 
 The three documents in `docs/` are the source of truth, not decoration. Read them before writing
 code; they specify behaviour at a level that determines implementation:
@@ -95,7 +95,11 @@ unrelated bug.
   and `App` folds it into the conversation at that moment. Copying it across in an effect instead
   costs a cascading render and a duplicate-bubble frame.
 - **Conversations persist on first message, not on creation**, so abandoned empty chats do not
-  accumulate.
+  accumulate. The save effect skips an unchanged document, which is what enforces that rule and
+  what keeps a mount from rewriting the bytes it just read.
+- **The URL fragment is the selection** (ADR-0007). `#/c/<id>` follows the selection and a
+  `hashchange` moves it back — no router. The first sync replaces rather than pushes, so the first
+  Back leaves the app instead of appearing to do nothing.
 - **Every stored document carries a schema version** with a migration path from every shipped
   version. The migration harness exists from v1, when there is nothing to migrate yet.
 

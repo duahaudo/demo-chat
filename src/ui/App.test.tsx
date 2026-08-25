@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { streamChat } = vi.hoisted(() => ({ streamChat: vi.fn() }));
@@ -9,7 +9,12 @@ const { App } = await import('./App');
 const { renderUi } = await import('./test-utils');
 
 afterEach(cleanup);
-beforeEach(() => streamChat.mockReset());
+beforeEach(() => {
+  streamChat.mockReset();
+  // Conversations outlive a render now: else each test inherits the previous one's chats.
+  localStorage.clear();
+  window.history.replaceState(null, '', '/');
+});
 
 const field = () => screen.getByRole('textbox', { name: 'Message' });
 
@@ -84,5 +89,67 @@ describe('App — the keyboard path', () => {
       expect(screen.getAllByRole('link')[1]?.getAttribute('aria-current')).toBe('page'),
     );
     expect(document.activeElement).toBe(field());
+  });
+});
+
+describe('App — chat management', () => {
+  const send = (content: string) => {
+    fireEvent.change(field(), { target: { value: content } });
+    fireEvent.keyDown(field(), { key: 'Enter' });
+  };
+
+  beforeEach(() => {
+    streamChat.mockImplementation(async function* () {
+      await Promise.resolve();
+      yield { kind: 'done' };
+    });
+  });
+
+  it('renames a chat inline', async () => {
+    renderUi(<App />);
+    send('Explain SSE');
+    await screen.findByRole('link', { name: /Explain SSE/ });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Explain SSE' }));
+    const title = screen.getByRole('textbox', { name: 'Chat title' });
+    fireEvent.change(title, { target: { value: 'Framing' } });
+    fireEvent.keyDown(title, { key: 'Enter' });
+
+    await screen.findByRole('link', { name: /Framing/ });
+    expect(screen.queryByRole('textbox', { name: 'Chat title' })).toBeNull();
+  });
+
+  it('deletes only after the confirmation is accepted', async () => {
+    renderUi(<App />);
+    send('Explain SSE');
+    await screen.findByRole('link', { name: /Explain SSE/ });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Explain SSE' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(screen.getByRole('link', { name: /Explain SSE/ })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Explain SSE' }));
+    const dialog = await screen.findByRole('alertdialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(screen.queryByRole('link', { name: /Explain SSE/ })).toBeNull());
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(screen.getByText('Start a conversation')).toBeTruthy();
+  });
+
+  it('keeps conversations across a reload, and addresses each by URL', async () => {
+    const first = renderUi(<App />);
+    send('Explain SSE');
+    await screen.findByRole('link', { name: /Explain SSE/ });
+    const url = window.location.hash;
+    expect(url).toMatch(/^#\/c\/.+/);
+
+    first.unmount();
+    renderUi(<App />);
+
+    await screen.findByRole('link', { name: /Explain SSE/ });
+    expect(screen.getByRole('heading', { name: 'Explain SSE' })).toBeTruthy();
+    expect(window.location.hash).toBe(url);
   });
 });

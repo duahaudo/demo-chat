@@ -1,4 +1,15 @@
-import { Box, Button, Drawer, Flex, Heading, Portal, Stack } from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  Dialog,
+  Drawer,
+  Flex,
+  Heading,
+  IconButton,
+  Portal,
+  Stack,
+  Text,
+} from '@chakra-ui/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useChatStream } from '@/app/useChatStream';
@@ -10,8 +21,13 @@ import { Composer } from './Composer';
 import { Transcript } from './Transcript';
 
 export function App() {
-  const { list, selected, selectedId, select, create, append } = useConversations();
+  const { list, selected, selectedId, select, create, append, rename, remove, problem } =
+    useConversations();
   const { status, text, error, send, stop } = useChatStream({ conversationId: selectedId });
+
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const deleting = list.find((conversation) => conversation.id === deletingId);
 
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const lastSentRef = useRef<readonly { role: MessageV1['role']; content: string }[]>([]);
@@ -93,6 +109,11 @@ export function App() {
     create();
   }, [append, create, foldTail, selectedId]);
 
+  const handleDelete = useCallback(() => {
+    if (deletingId !== null) remove(deletingId);
+    setDeletingId(null);
+  }, [deletingId, remove]);
+
   const chatList = (
     <Stack gap="3">
       <Button onClick={handleCreate}>New chat</Button>
@@ -107,10 +128,38 @@ export function App() {
               now={now}
               selected={conversation.id === selectedId}
               streaming={busy && conversation.id === selectedId}
+              renaming={conversation.id === renamingId}
+              actions={
+                <Flex align="center" gap="1">
+                  <IconButton
+                    size="xs"
+                    variant="ghost"
+                    aria-label={`Rename ${conversation.title}`}
+                    onClick={() => setRenamingId(conversation.id)}
+                    {...revealOnHover}
+                  >
+                    <PencilIcon />
+                  </IconButton>
+                  <IconButton
+                    size="xs"
+                    variant="ghost"
+                    aria-label={`Delete ${conversation.title}`}
+                    onClick={() => setDeletingId(conversation.id)}
+                    {...revealOnHover}
+                  >
+                    <TrashIcon />
+                  </IconButton>
+                </Flex>
+              }
               onSelect={(event) => {
                 event.preventDefault();
                 handleSelect(conversation.id);
               }}
+              onRename={(title) => {
+                rename(conversation.id, title);
+                setRenamingId(null);
+              }}
+              onRenameCancel={() => setRenamingId(null)}
             />
           </Box>
         ))}
@@ -167,6 +216,12 @@ export function App() {
           </Heading>
         </Flex>
 
+        {problem === undefined ? null : (
+          <Text role="alert" color="fg.error" fontSize="sm" paddingX="4" paddingTop="2">
+            {problem}
+          </Text>
+        )}
+
         <Box flex="1" overflowY="auto" paddingX="4">
           <Box maxWidth="3xl" marginX="auto">
             <Transcript
@@ -185,7 +240,81 @@ export function App() {
           </Box>
         </Box>
       </Flex>
+
+      <Dialog.Root
+        role="alertdialog"
+        open={deleting !== undefined}
+        onOpenChange={(event) => {
+          if (!event.open) setDeletingId(null);
+        }}
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Delete chat?</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Text>
+                  {deleting?.title} and everything in it will be deleted. This cannot be undone.
+                </Text>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Dialog.ActionTrigger asChild>
+                  <Button variant="outline">Cancel</Button>
+                </Dialog.ActionTrigger>
+                <Button colorPalette="red" onClick={handleDelete}>
+                  Delete
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </Flex>
+  );
+}
+
+const revealOnHover = {
+  opacity: 0,
+  _groupHover: { opacity: 1 },
+  _focusVisible: { opacity: 1 },
+} as const;
+
+function PencilIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 20h4L20 8l-4-4L4 16z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13" />
+    </svg>
   );
 }
 
