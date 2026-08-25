@@ -13,11 +13,6 @@ import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 
 const UPSTREAM_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-// A routing endpoint rather than a pinned `:free` slug — free model ids rotate without notice.
-// `models` is OpenRouter's own fallback list, tried in order. It must stay free-only: a key with a
-// spend limit of 0 is refused up front ("Key limit exceeded") if any candidate can bill, which is
-// why `openrouter/auto` is not in the list.
-// `||`, not `??`: an env var present but empty is unset, and an empty model is a 400 upstream.
 const MODEL = process.env['OPENROUTER_MODEL'] || 'openrouter/free';
 const MODEL_FALLBACKS = ['openrouter/free'];
 
