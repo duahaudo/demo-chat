@@ -18,7 +18,7 @@ Three decisions reshape the build order in TECHNICAL-DESIGN §9:
 | Decision         | Choice                        | Effect                                                           |
 | ---------------- | ----------------------------- | ---------------------------------------------------------------- |
 | First-pass scope | Pipeline and hygiene first    | Scaffolding, lint/format/hooks, CI and ADRs land before app code |
-| Credential       | Proxy only                    | BYOK shipped without a UI and was removed (ADR-0009)             |
+| Credential       | Proxy only                    | The server key never reaches client code (ADR-0003)              |
 | Environment      | Localhost first, Vercel later | The proxy must run under `vite dev` without `vercel dev`         |
 
 The third is the only real design pressure. Everything else is the specs executed as written.

@@ -255,7 +255,7 @@ describe('streamChat — transport failures', () => {
 });
 
 describe('streamChat — request shape', () => {
-  it('posts the messages to the proxy and sends no Authorization by default', async () => {
+  it('posts the messages to the proxy and never sends an Authorization header', async () => {
     serve(HELLO, asOneChunk);
     await collect();
 
