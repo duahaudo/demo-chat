@@ -28,8 +28,7 @@ cp .env.example .env.local   # add OPENROUTER_API_KEY
 pnpm dev                     # app and the /api/chat proxy, one server
 ```
 
-Without a key the app still runs; requests fail and the failed state explains why. A user can also
-supply their own key (BYOK), which skips the proxy's rate limit but no other cap.
+Without a key the app still runs; requests fail and the failed state explains why.
 
 ## Commands
 

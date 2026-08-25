@@ -255,7 +255,7 @@ describe('streamChat — transport failures', () => {
 });
 
 describe('streamChat — request shape', () => {
-  it('posts the messages to the proxy and sends no Authorization by default', async () => {
+  it('posts the messages to the proxy and never sends an Authorization header', async () => {
     serve(HELLO, asOneChunk);
     await collect();
 
@@ -266,38 +266,6 @@ describe('streamChat — request shape', () => {
     expect(JSON.parse(init.body as string)).toEqual({
       messages: [{ role: 'user', content: 'Hi' }],
     });
-    expect((init.headers as Record<string, string>)['Authorization']).toBeUndefined();
-  });
-
-  it('forwards a BYOK key as a bearer token', async () => {
-    serve(HELLO, asOneChunk);
-    const events: TransportEvent[] = [];
-    for await (const event of streamChat({
-      messages: [{ role: 'user', content: 'Hi' }],
-      signal: new AbortController().signal,
-      apiKey: 'sk-or-v1-user-key',
-    })) {
-      events.push(event);
-    }
-
-    const init = vi.mocked(fetch).mock.calls[0]?.[1] as RequestInit;
-    expect((init.headers as Record<string, string>)['Authorization']).toBe(
-      'Bearer sk-or-v1-user-key',
-    );
-  });
-
-  it('omits the header for an empty key rather than sending "Bearer "', async () => {
-    serve(HELLO, asOneChunk);
-    for await (const event of streamChat({
-      messages: [{ role: 'user', content: 'Hi' }],
-      signal: new AbortController().signal,
-      apiKey: '',
-    })) {
-      expect(event).toBeDefined();
-      break;
-    }
-
-    const init = vi.mocked(fetch).mock.calls[0]?.[1] as RequestInit;
     expect((init.headers as Record<string, string>)['Authorization']).toBeUndefined();
   });
 });

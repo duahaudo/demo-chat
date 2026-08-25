@@ -140,7 +140,7 @@ never implementation detail.
 | ---- | ------------------------------------------------------------ |
 | 0001 | Vite + React rather than a meta-framework                    |
 | 0002 | Chakra UI default theme, unmodified                          |
-| 0003 | Credential in a serverless proxy; BYOK as an option          |
+| 0003 | Credential in a serverless proxy                             |
 | 0004 | Four-layer architecture with a downward-only dependency rule |
 | 0005 | Coverage thresholds on core and adapter only                 |
 | 0006 | Local persistence with schema versioning from v1.0           |

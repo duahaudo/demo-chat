@@ -83,10 +83,8 @@ unrelated bug.
 - **The proxy is a security boundary, not a passthrough.** It pins the model, caps `max_tokens`,
   body size and message count, and rate limits by address. Without those it is an open relay
   against the quota. It streams the upstream body through — it does **not** parse SSE.
-- **BYOK skips rate limiting only.** A client-supplied `Authorization` header is forwarded instead
-  of the server key and the address rate limit is skipped (it is the user's quota); every other cap
-  still applies. The user's key is client-side state, never persisted to the storage layer, never
-  logged.
+- **One credential path.** The server key or a 503, and every request rate limited by address.
+  The proxy holds the only credential; client code never carries one (ADR-0003).
 - **Never fabricate a frame boundary.** Network reads do not align with SSE frames. The core buffer
   emits only complete frames plus a terminal flush for streams that omit the final delimiter.
 - **Deltas flush once per animation frame**, accumulating in a ref — one state update per painted
