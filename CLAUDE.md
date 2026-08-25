@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-**Phases 0-3 landed.** Repository, toolchain, lint zones, hooks, CI, ADRs; `src/core/` (SSE
+**Phases 0-4 landed.** Repository, toolchain, lint zones, hooks, CI, ADRs; `src/core/` (SSE
 framing, event classification, error classification and retry policy, storage schema and migration
 harness); `api/chat.ts` (the proxy, mounted locally by a Vite plugin); `src/adapter/`
-(`transport.ts`, `storage.ts`); and `src/app/useChatStream.ts` (lifecycle, cancellation, bounded
-retry, frame-scheduled rendering, conversation-id guard). All under test. `src/ui/` is still a
-placeholder shell — Phase 4 builds the presentation layer. `pnpm test:e2e` arrives with its
-subject in Phase 6.
+(`transport.ts`, `storage.ts`); `src/app/` (`useChatStream.ts`, `useConversations.ts`); and
+`src/ui/` (`App`, `Transcript`, `MessageBubble`, `Composer`, `ChatListItem` — the six states, all
+under component test). All under test. Conversations are in memory only: Phase 5 puts the
+`localStorage` driver and a router behind `useConversations`, and adds inline rename and delete.
+`pnpm test:e2e` arrives with its subject in Phase 6.
 
 The three documents in `docs/` are the source of truth, not decoration. Read them before writing
 code; they specify behaviour at a level that determines implementation:
@@ -47,7 +48,8 @@ convention.
 
 ```
 src/ui/       Presentation. React + Chakra. No fetch, no parsing.
-src/app/      useChatStream.ts — lifecycle, cancellation, retry, render scheduling.
+src/app/      useChatStream.ts   — lifecycle, cancellation, retry, render scheduling.
+              useConversations.ts — chat list state (in memory until Phase 5).
 src/adapter/  transport.ts — fetch, AbortSignal, TextDecoderStream, frames out.
               storage.ts   — localStorage driver over core's migrate().
 src/core/     Pure functions. Parsing, classification, migrations.
@@ -71,8 +73,9 @@ These are the non-obvious ones. Each is specified, and each has a failure mode t
 unrelated bug.
 
 - **The credential never reaches client code.** Vite inlines any client-visible env value into the
-  bundle. `OPENROUTER_API_KEY` is read server-side only, never `VITE_`-prefixed. A CI job greps
-  `dist/` for it.
+  bundle. `OPENROUTER_API_KEY` is read server-side only, never `VITE_`-prefixed. `secret-scan.yml`
+  greps tracked source for key literals and for any `VITE_`-prefixed or `import.meta.env` read of
+  it; the same grep over `dist/` waits for Phase 6, when there is a bundle worth grepping.
 - **The proxy is a security boundary, not a passthrough.** It pins the model, caps `max_tokens`,
   body size and message count, and rate limits by address. Without those it is an open relay
   against the quota. It streams the upstream body through — it does **not** parse SSE.
@@ -87,7 +90,10 @@ unrelated bug.
   responses.
 - **Every delta is matched against the requesting conversation's id** and dropped on mismatch.
   Switching chats mid-stream aborts the request; a late delta must never land in the wrong chat.
-- **Partial content is never discarded** — on cancel, on unmount, on error alike.
+- **Partial content is never discarded** — on cancel, on unmount, on error alike. A settled answer
+  stays in `useChatStream` until something displaces it (a new message, a retry, a chat switch),
+  and `App` folds it into the conversation at that moment. Copying it across in an effect instead
+  costs a cascading render and a duplicate-bubble frame.
 - **Conversations persist on first message, not on creation**, so abandoned empty chats do not
   accumulate.
 - **Every stored document carries a schema version** with a migration path from every shipped
@@ -113,7 +119,10 @@ These were verified against live sources — do not re-research or guess at them
   `finish_reason: "error"`, cancellation via `AbortController`.
 - **Model**: `openrouter/free` — a router selecting a free model per request, filtered by required
   capabilities. This is the "routing endpoint rather than a pinned `:free` slug" the design asks
-  for. Fallbacks: `openrouter/auto`, then a pinned slug.
+  for, overridable per deployment with `OPENROUTER_MODEL`. The `models` fallback list must stay
+  free-only: `openrouter/auto` can bill, and a key with a spend limit of 0 is refused up front with
+  403 "Key limit exceeded (total limit)" when any candidate can bill — even though the primary
+  model is free.
 - **Free-tier limits**: 50 requests/day (1,000 with $10 credit), 20 RPM. Too low for real-API E2E —
   E2E runs against a stubbed route.
 - **Chakra UI**: pin `3.36.x`. Confirm `fg.error` exists in the pinned version at scaffold time.

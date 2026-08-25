@@ -13,10 +13,8 @@ import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 
 const UPSTREAM_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-// A routing endpoint rather than a pinned `:free` slug — free model ids rotate without notice.
-// `models` is OpenRouter's own fallback list, tried in order.
-const MODEL = 'openrouter/free';
-const MODEL_FALLBACKS = ['openrouter/free', 'openrouter/auto'];
+const MODEL = process.env['OPENROUTER_MODEL'] || 'openrouter/free';
+const MODEL_FALLBACKS = ['openrouter/free'];
 
 const MAX_TOKENS = 1024;
 const MAX_BODY_BYTES = 32 * 1024;

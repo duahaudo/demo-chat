@@ -225,8 +225,11 @@ describe('the upstream request the client cannot influence', () => {
     });
 
     const body = sentBody();
-    expect(body['model']).toBe('openrouter/free');
-    expect(body['models']).toEqual(['openrouter/free', 'openrouter/auto']);
+    // Server-configured (`OPENROUTER_MODEL`, with the same default the handler uses); what the test
+    // pins is that the client's model never reaches upstream.
+    expect(body['model']).not.toBe('anthropic/claude-opus-4');
+    expect(body['model']).toBe(process.env['OPENROUTER_MODEL'] || 'openrouter/free');
+    expect(body['models']).toEqual(['openrouter/free']);
     expect(body['max_tokens']).toBe(1024);
     expect(body['stream']).toBe(true);
     // Only the validated messages are forwarded; unknown fields are dropped, not merged.
