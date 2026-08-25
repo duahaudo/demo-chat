@@ -20,8 +20,6 @@ export interface WireMessage {
 export interface StreamChatOptions {
   readonly messages: readonly WireMessage[];
   readonly signal: AbortSignal;
-  /** BYOK. Forwarded as `Authorization`, never persisted and never logged. */
-  readonly apiKey?: string | undefined;
 }
 
 /** `error` is the provider failing inside a live stream; `failed` is the transport around it. */
@@ -53,17 +51,14 @@ async function readErrorMessage(response: Response): Promise<string | undefined>
  * `[DONE]`) is not a failure: the buffer flushes and every delta already yielded stands.
  */
 export async function* streamChat(options: StreamChatOptions): AsyncGenerator<TransportEvent> {
-  const { messages, signal, apiKey } = options;
+  const { messages, signal } = options;
 
   let response: Response;
   try {
     response = await fetch(ENDPOINT, {
       method: 'POST',
       signal,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(apiKey !== undefined && apiKey !== '' ? { Authorization: `Bearer ${apiKey}` } : {}),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages }),
     });
   } catch (cause) {

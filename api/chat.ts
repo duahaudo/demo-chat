@@ -139,19 +139,6 @@ function readMessages(
   return { ok: true, messages };
 }
 
-/**
- * A client-supplied key, forwarded verbatim and never persisted or logged (ADR-0003). The shape
- * check only rejects an obviously malformed header — validating the key is OpenRouter's job.
- */
-function readClientKey(req: IncomingMessage): string | undefined {
-  const header = req.headers.authorization;
-  if (typeof header !== 'string') return undefined;
-  const match = /^Bearer\s+(\S+)$/.exec(header.trim());
-  const token = match?.[1];
-  if (token === undefined || token.length < 8 || token.length > 512) return undefined;
-  return token;
-}
-
 function sendJson(res: ServerResponse, status: number, code: string, message: string): void {
   if (res.headersSent) return;
   res.writeHead(status, {
@@ -168,27 +155,17 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return;
   }
 
-  const clientKey = readClientKey(req);
   const serverKey = process.env['OPENROUTER_API_KEY'];
+  if (serverKey === undefined || serverKey === '') {
+    sendJson(res, 503, 'no_credential', 'The server has no API key configured.');
+    return;
+  }
 
-  // BYOK skips the address rate limit only — it is the user's quota. Every other cap still applies.
-  if (clientKey === undefined) {
-    if (serverKey === undefined || serverKey === '') {
-      sendJson(
-        res,
-        503,
-        'no_credential',
-        'The server has no API key configured. Add your own key in settings.',
-      );
-      return;
-    }
-
-    const limit = rateLimit(addressOf(req), Date.now());
-    if (!limit.ok) {
-      res.setHeader('Retry-After', String(limit.retryAfter));
-      sendJson(res, 429, 'rate_limited', 'Too many requests. Wait a moment, or use your own key.');
-      return;
-    }
+  const limit = rateLimit(addressOf(req), Date.now());
+  if (!limit.ok) {
+    res.setHeader('Retry-After', String(limit.retryAfter));
+    sendJson(res, 429, 'rate_limited', 'Too many requests. Wait a moment and try again.');
+    return;
   }
 
   const body = await readBody(req);
@@ -215,7 +192,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       method: 'POST',
       signal: abort.signal,
       headers: {
-        Authorization: `Bearer ${clientKey ?? serverKey ?? ''}`,
+        Authorization: `Bearer ${serverKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

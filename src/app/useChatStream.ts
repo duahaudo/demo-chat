@@ -20,8 +20,6 @@ export type ChatStreamStatus =
 
 export interface UseChatStreamOptions {
   readonly conversationId: string;
-  /** BYOK. Passed straight to the transport; never persisted, never logged. */
-  readonly apiKey?: string | undefined;
   /** Test seam: keeps jittered backoff out of the wall clock. */
   readonly sleep?: (ms: number) => Promise<void>;
 }
@@ -58,7 +56,7 @@ function classifyStreamError(payload: StreamErrorPayload): ClassifiedError {
 }
 
 export function useChatStream(options: UseChatStreamOptions): ChatStream {
-  const { conversationId, apiKey, sleep = wait } = options;
+  const { conversationId, sleep = wait } = options;
 
   const [state, setState] = useState<StreamState>(IDLE);
 
@@ -141,7 +139,7 @@ export function useChatStream(options: UseChatStreamOptions): ChatStream {
       for (let attempt = 0; ; attempt += 1) {
         let failure: ClassifiedError | undefined;
 
-        for await (const event of streamChat({ messages, signal: controller.signal, apiKey })) {
+        for await (const event of streamChat({ messages, signal: controller.signal })) {
           if (conversationIdRef.current !== requestId || controller.signal.aborted) break;
 
           if (event.kind === 'delta') {
@@ -184,7 +182,7 @@ export function useChatStream(options: UseChatStreamOptions): ChatStream {
         return;
       }
     },
-    [apiKey, schedule, settle, sleep],
+    [schedule, settle, sleep],
   );
 
   const stop = useCallback(() => {

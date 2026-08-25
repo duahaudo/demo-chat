@@ -18,7 +18,7 @@ Three decisions reshape the build order in TECHNICAL-DESIGN §9:
 | Decision         | Choice                        | Effect                                                           |
 | ---------------- | ----------------------------- | ---------------------------------------------------------------- |
 | First-pass scope | Pipeline and hygiene first    | Scaffolding, lint/format/hooks, CI and ADRs land before app code |
-| Credential       | Proxy **and** BYOK toggle     | Both paths ship in v1.0, not just ADR-0003's default             |
+| Credential       | Proxy only                    | BYOK shipped without a UI and was removed (ADR-0009)             |
 | Environment      | Localhost first, Vercel later | The proxy must run under `vite dev` without `vercel dev`         |
 
 The third is the only real design pressure. Everything else is the specs executed as written.
@@ -86,7 +86,7 @@ and add the rest alongside the code they guard, so the default branch is never k
    coverage, bundle budget and E2E** appended in Phases 1 and 6 as their subjects
    appear. Path filters so docs-only changes skip heavy jobs.
 7. `docs/adr/0001`–`0006` from §6's table, each stating context, options, decision and
-   consequences accepted. Write 0003 to cover the BYOK toggle as shipped, not deferred.
+   consequences accepted.
 8. PR template, issue labels, branch protection with required checks.
 
 **Files:** `package.json`, `tsconfig.json`, `eslint.config.js`, `.prettierrc`, `vite.config.ts`,
@@ -120,7 +120,7 @@ asserted in Phase 2. Coverage thresholds apply here and to the adapter only (ADR
 
 ---
 
-## 6. Phase 2 — Proxy and BYOK (`api/chat.ts`)
+## 6. Phase 2 — Proxy (`api/chat.ts`)
 
 The handler is the security boundary. Vite inlines any client-visible environment value into the
 bundle, so the key lives only in a non-`VITE_`-prefixed variable read server-side
@@ -135,12 +135,6 @@ Handler responsibilities, all load-bearing (§3.3):
 - Reject anything unexpected before it reaches OpenRouter. Without these caps the endpoint is an
   open relay against our quota.
 - Stream the upstream response body straight through. The proxy does not parse SSE.
-
-**BYOK.** The client may send `Authorization: Bearer <user key>`. When present the proxy forwards
-that key instead of the server key and skips rate limiting — it is the user's quota — while
-keeping every other cap. The key is stored client-side only, never written to the storage layer
-and never logged. The UI is a settings field plus a "using your key" indicator: a state, not a
-screen.
 
 **Local mount.** The Vite plugin from §3 above. Verify with
 `curl -N localhost:5173/api/chat` against the real key — the first genuinely end-to-end moment.
@@ -217,15 +211,15 @@ The deferred CI jobs now have subjects.
 
 ## 11. Verification
 
-| Phase | Check                                                                                                                                                                    |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0     | `pnpm lint && pnpm typecheck && pnpm build` green; a deliberately malformed commit message is rejected by the hook; a `ui/` file importing `fetch` fails lint            |
-| 1     | `pnpm test` green with byte-at-a-time and random-split-point feeds; coverage threshold met                                                                               |
-| 2     | `curl -N localhost:5173/api/chat` streams real tokens against the real key; an oversized body is rejected; the rate limit trips; the BYOK header path forwards correctly |
-| 3     | Mocked-transport integration suite green; the composer stays responsive during a fast response; switching chat mid-stream leaves zero deltas in the wrong conversation   |
-| 4     | Each of the six states renders and announces; full keyboard path new chat → select → compose → send → stop                                                               |
-| 5     | Reload preserves conversations; a hand-written prior-version document migrates forward; back and forward navigate chats                                                  |
-| 6     | E2E journeys green against the preview deployment; no key found in `dist/`                                                                                               |
+| Phase | Check                                                                                                                                                                  |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | `pnpm lint && pnpm typecheck && pnpm build` green; a deliberately malformed commit message is rejected by the hook; a `ui/` file importing `fetch` fails lint          |
+| 1     | `pnpm test` green with byte-at-a-time and random-split-point feeds; coverage threshold met                                                                             |
+| 2     | `curl -N localhost:5173/api/chat` streams real tokens against the real key; an oversized body is rejected; the rate limit trips                                        |
+| 3     | Mocked-transport integration suite green; the composer stays responsive during a fast response; switching chat mid-stream leaves zero deltas in the wrong conversation |
+| 4     | Each of the six states renders and announces; full keyboard path new chat → select → compose → send → stop                                                             |
+| 5     | Reload preserves conversations; a hand-written prior-version document migrates forward; back and forward navigate chats                                                |
+| 6     | E2E journeys green against the preview deployment; no key found in `dist/`                                                                                             |
 
 ---
 

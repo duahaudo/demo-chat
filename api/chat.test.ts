@@ -123,12 +123,12 @@ describe('method and credential', () => {
     expect(out.headers['Allow']).toBe('POST');
   });
 
-  it('refuses when the server has no key and the client sent none', async () => {
+  it('refuses when the server has no key configured', async () => {
     delete process.env['OPENROUTER_API_KEY'];
     const out = await call({ body: ONE_MESSAGE });
 
     expect(out.status).toBe(503);
-    expect(out.body()).toMatch(/Add your own key/);
+    expect(out.body()).toMatch(/no API key configured/);
   });
 
   it('never echoes the server key in a response', async () => {
@@ -305,63 +305,6 @@ describe('rate limiting', () => {
       res,
     );
     expect(out.status).toBe(429);
-  });
-});
-
-describe('BYOK', () => {
-  it('forwards the client key instead of the server key', async () => {
-    stubUpstream();
-    await call({ body: ONE_MESSAGE, headers: { authorization: 'Bearer sk-or-v1-user-supplied' } });
-
-    expect(sentHeaders()['Authorization']).toBe('Bearer sk-or-v1-user-supplied');
-  });
-
-  it('skips the address rate limit, because it is the user’s quota', async () => {
-    stubUpstream();
-    const address = nextAddress();
-    const headers = { authorization: 'Bearer sk-or-v1-user-supplied' };
-
-    for (let i = 0; i < 25; i += 1) {
-      const { res, out } = makeRes();
-      await handler(makeReq({ body: ONE_MESSAGE, address, headers }), res);
-      expect(out.status).toBe(200);
-    }
-  });
-
-  it('still applies every other cap', async () => {
-    const messages = Array.from({ length: 41 }, () => ({ role: 'user', content: 'x' }));
-    const out = await call({
-      body: JSON.stringify({ messages }),
-      headers: { authorization: 'Bearer sk-or-v1-user-supplied' },
-    });
-
-    expect(out.status).toBe(400);
-  });
-
-  it('works with no server key configured at all', async () => {
-    delete process.env['OPENROUTER_API_KEY'];
-    stubUpstream();
-    const out = await call({
-      body: ONE_MESSAGE,
-      headers: { authorization: 'Bearer sk-or-v1-user-supplied' },
-    });
-
-    expect(out.status).toBe(200);
-    expect(sentHeaders()['Authorization']).toBe('Bearer sk-or-v1-user-supplied');
-  });
-
-  it('ignores a malformed Authorization header and falls back to the server key', async () => {
-    stubUpstream();
-    await call({ body: ONE_MESSAGE, headers: { authorization: 'Basic abc' } });
-
-    expect(sentHeaders()['Authorization']).toBe(`Bearer ${SERVER_KEY}`);
-  });
-
-  it('ignores an implausibly short bearer token', async () => {
-    stubUpstream();
-    await call({ body: ONE_MESSAGE, headers: { authorization: 'Bearer xy' } });
-
-    expect(sentHeaders()['Authorization']).toBe(`Bearer ${SERVER_KEY}`);
   });
 });
 

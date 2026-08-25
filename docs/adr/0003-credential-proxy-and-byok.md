@@ -1,6 +1,6 @@
 # ADR-0003 — Credential in a serverless proxy, with BYOK as an option
 
-**Status:** Accepted · **Date:** 2026-08-24
+**Status:** Accepted; BYOK amended by [ADR-0009](0009-drop-byok.md) · **Date:** 2026-08-24
 
 ## Context
 
