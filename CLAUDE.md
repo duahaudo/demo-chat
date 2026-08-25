@@ -73,8 +73,9 @@ These are the non-obvious ones. Each is specified, and each has a failure mode t
 unrelated bug.
 
 - **The credential never reaches client code.** Vite inlines any client-visible env value into the
-  bundle. `OPENROUTER_API_KEY` is read server-side only, never `VITE_`-prefixed. A CI job greps
-  `dist/` for it.
+  bundle. `OPENROUTER_API_KEY` is read server-side only, never `VITE_`-prefixed. `secret-scan.yml`
+  greps tracked source for key literals and for any `VITE_`-prefixed or `import.meta.env` read of
+  it; the same grep over `dist/` waits for Phase 6, when there is a bundle worth grepping.
 - **The proxy is a security boundary, not a passthrough.** It pins the model, caps `max_tokens`,
   body size and message count, and rate limits by address. Without those it is an open relay
   against the quota. It streams the upstream body through — it does **not** parse SSE.
