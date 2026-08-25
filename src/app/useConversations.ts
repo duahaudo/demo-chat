@@ -1,17 +1,21 @@
 /**
- * Chat list state: which conversations exist, which one is open, what is in them.
- *
- * In memory only. Phase 5 replaces the store behind this same surface with the `localStorage`
- * driver and a router, at which point "persisted on first message, not on creation" becomes a
- * real rule rather than a shape the data already has.
+ * Chat list state, persisted through the adapter's driver and addressed by the URL fragment
+ * (TECHNICAL-DESIGN §3.1, ADR-0007).
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { ConversationV1, MessageV1 } from '@/core/storage/schema';
+import { browserStorage, loadDocument, saveDocument, type StorageLike } from '@/adapter/storage';
+import {
+  CURRENT_VERSION,
+  type ConversationV1,
+  type MessageV1,
+  type StoredDocument,
+} from '@/core/storage/schema';
 
 const UNTITLED = 'New chat';
 const TITLE_LIMIT = 48;
+const ROUTE = '#/c/';
 
 export interface Conversations {
   /** Ordered by last activity, most recent first. */
@@ -21,6 +25,10 @@ export interface Conversations {
   readonly select: (id: string) => void;
   readonly create: () => void;
   readonly append: (id: string, message: MessageV1) => void;
+  readonly rename: (id: string, title: string) => void;
+  readonly remove: (id: string) => void;
+  /** Storage could not be read or written. Everything on screen still works. */
+  readonly problem: string | undefined;
 }
 
 interface State {
@@ -44,11 +52,79 @@ function titleFrom(content: string): string {
   return line.length > TITLE_LIMIT ? `${line.slice(0, TITLE_LIMIT).trimEnd()}…` : line;
 }
 
-export function useConversations(now: () => number = Date.now): Conversations {
+function byRecent(a: ConversationV1, b: ConversationV1): number {
+  return b.updatedAt - a.updatedAt;
+}
+
+/** Abandoned empty chats never reach storage (TECHNICAL-DESIGN §3.2). */
+function filterOutEmptyConversation(list: readonly ConversationV1[]): StoredDocument {
+  return {
+    version: CURRENT_VERSION,
+    conversations: list.filter((c) => c.messages.length > 0),
+  };
+}
+
+function idFromHash(hash: string): string {
+  return hash.startsWith(ROUTE) ? decodeURIComponent(hash.slice(ROUTE.length)) : '';
+}
+
+export function useConversations(
+  now: () => number = Date.now,
+  storage?: StorageLike | null,
+): Conversations {
+  const [store] = useState<StorageLike | null>(() =>
+    storage === undefined ? browserStorage() : storage,
+  );
+
+  const [restored] = useState(() => (store === null ? undefined : loadDocument(store)));
+  const [saveProblem, setSaveProblem] = useState<string | undefined>(undefined);
+
   const [state, setState] = useState<State>(() => {
-    const firstConversation = newBlankConversation(now());
-    return { list: [firstConversation], selectedId: firstConversation.id };
+    const stored = [...(restored?.doc.conversations ?? [])].sort(byRecent);
+    const list = stored.length > 0 ? stored : [newBlankConversation(now())];
+    const routed = idFromHash(window.location.hash);
+    const selectedId = list.some((c) => c.id === routed) ? routed : (list[0]?.id ?? '');
+    return { list, selectedId };
   });
+
+  const mountedRef = useRef(false);
+
+  // First sync replaces rather than pushes, so the first Back leaves the app.
+  useEffect(() => {
+    const target = `${ROUTE}${encodeURIComponent(state.selectedId)}`;
+    if (idFromHash(window.location.hash) !== state.selectedId) {
+      if (mountedRef.current) window.location.hash = target;
+      else window.history.replaceState(null, '', target);
+    }
+    mountedRef.current = true;
+  }, [state.selectedId]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const id = idFromHash(window.location.hash);
+      setState((prev) =>
+        id === prev.selectedId || !prev.list.some((c) => c.id === id)
+          ? prev
+          : { ...prev, selectedId: id },
+      );
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  // Seeded from what was loaded: unchanged bytes are not rewritten, so a mount keeps the load
+  // problem on screen and a new empty chat stays out of storage.
+  const savedRef = useRef(JSON.stringify(filterOutEmptyConversation(state.list)));
+  useEffect(() => {
+    if (store === null) return;
+    const doc = filterOutEmptyConversation(state.list);
+    const serialized = JSON.stringify(doc);
+    if (serialized === savedRef.current) return;
+    savedRef.current = serialized;
+
+    const outcome = saveDocument(store, doc);
+    setSaveProblem(outcome.ok ? undefined : outcome.reason);
+  }, [state.list, store]);
 
   const select = useCallback((id: string) => {
     setState((prev) => ({ ...prev, selectedId: id }));
@@ -76,9 +152,34 @@ export function useConversations(now: () => number = Date.now): Conversations {
           messages: [...conversation.messages, message],
         };
       });
-      return { ...prev, list: [...list].sort((a, b) => b.updatedAt - a.updatedAt) };
+      return { ...prev, list: [...list].sort(byRecent) };
     });
   }, []);
+
+  /** A rename is not activity: the list keeps its order. */
+  const rename = useCallback((id: string, title: string) => {
+    const next = title.trim();
+    if (next === '') return;
+    setState((prev) => ({
+      ...prev,
+      list: prev.list.map((c) => (c.id === id ? { ...c, title: next } : c)),
+    }));
+  }, []);
+
+  const remove = useCallback(
+    (id: string) => {
+      setState((prev) => {
+        const list = prev.list.filter((c) => c.id !== id);
+        if (list.length === 0) {
+          const blank = newBlankConversation(now());
+          return { list: [blank], selectedId: blank.id };
+        }
+        const selectedId = prev.selectedId === id ? (list[0]?.id ?? '') : prev.selectedId;
+        return { list, selectedId };
+      });
+    },
+    [now],
+  );
 
   const selected = useMemo(
     () => state.list.find((c) => c.id === state.selectedId),
@@ -92,5 +193,8 @@ export function useConversations(now: () => number = Date.now): Conversations {
     select,
     create,
     append,
+    rename,
+    remove,
+    problem: saveProblem ?? restored?.problem,
   };
 }

@@ -1,5 +1,5 @@
 import { Box, Circle, Flex, Input, Link, Stack, Text, VisuallyHidden } from '@chakra-ui/react';
-import { useEffect, useRef, type KeyboardEvent, type MouseEvent } from 'react';
+import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 
 import { relativeTime } from './relativeTime';
 
@@ -12,6 +12,7 @@ export interface ChatListItemProps {
   readonly selected?: boolean;
   readonly streaming?: boolean;
   readonly renaming?: boolean;
+  readonly actions?: ReactNode;
   readonly onSelect?: (event: MouseEvent<HTMLAnchorElement>) => void;
   readonly onRename?: (title: string) => void;
   readonly onRenameCancel?: () => void;
@@ -27,30 +28,26 @@ export function ChatListItem(props: ChatListItemProps) {
     selected = false,
     streaming = false,
     renaming = false,
+    actions,
     onSelect,
     onRename,
     onRenameCancel,
   } = props;
 
-  // An input inside an anchor is neither valid nor operable, so renaming replaces the row.
   if (renaming) {
     return <RenameField title={title} onRename={onRename} onCancel={onRenameCancel} />;
   }
 
   return (
-    <Link
-      href={href}
-      onClick={onSelect}
-      aria-current={selected ? 'page' : undefined}
-      display="flex"
-      alignItems="stretch"
+    <Flex
+      className="group"
+      align="stretch"
       gap="2"
       paddingInlineEnd="3"
       paddingY="2"
       borderRadius="md"
-      width="full"
       bg={selected ? 'bg.muted' : 'transparent'}
-      _hover={{ bg: 'bg.muted', textDecoration: 'none' }}
+      _hover={{ bg: 'bg.muted' }}
     >
       <Box
         width="1"
@@ -58,29 +55,38 @@ export function ChatListItem(props: ChatListItemProps) {
         bg={selected ? 'colorPalette.solid' : 'transparent'}
         aria-hidden="true"
       />
-      <Stack gap="0" flex="1" minWidth="0">
-        <Flex align="center" gap="2" minWidth="0">
-          {streaming ? (
-            <>
-              <Circle size="2" bg="colorPalette.solid" flexShrink="0" aria-hidden="true" />
-              {/* R5: the dot is the visual signal, this is the one screen readers get. */}
-              <VisuallyHidden>Streaming</VisuallyHidden>
-            </>
+      <Link
+        href={href}
+        onClick={onSelect}
+        aria-current={selected ? 'page' : undefined}
+        flex="1"
+        minWidth="0"
+        _hover={{ textDecoration: 'none' }}
+      >
+        <Stack gap="0" flex="1" minWidth="0">
+          <Flex align="center" gap="2" minWidth="0">
+            {streaming ? (
+              <>
+                <Circle size="2" bg="colorPalette.solid" flexShrink="0" aria-hidden="true" />
+                <VisuallyHidden>Streaming</VisuallyHidden>
+              </>
+            ) : null}
+            <Text truncate fontWeight="medium">
+              {title}
+            </Text>
+          </Flex>
+          {preview !== undefined && preview !== '' ? (
+            <Text truncate fontSize="sm" color="fg.muted">
+              {preview}
+            </Text>
           ) : null}
-          <Text truncate fontWeight="medium">
-            {title}
+          <Text fontSize="xs" color="fg.muted">
+            {relativeTime(updatedAt, now)}
           </Text>
-        </Flex>
-        {preview !== undefined && preview !== '' ? (
-          <Text truncate fontSize="sm" color="fg.muted">
-            {preview}
-          </Text>
-        ) : null}
-        <Text fontSize="xs" color="fg.muted">
-          {relativeTime(updatedAt, now)}
-        </Text>
-      </Stack>
-    </Link>
+        </Stack>
+      </Link>
+      {actions}
+    </Flex>
   );
 }
 

@@ -29,17 +29,13 @@ export interface LoadOutcome {
 export type SaveOutcome = { readonly ok: true } | { readonly ok: false; readonly reason: string };
 
 /**
- * `localStorage`, or `null` when it cannot be used — access itself throws in Safari's private mode
- * and under a blocked-cookies policy, so this is a `try`, not a truthiness check.
+ * `localStorage`, or `null` when it cannot be used — access itself throws under a blocked-cookies
+ * policy, so this is a `try`, not a truthiness check. A full quota is deliberately not probed for:
+ * reads still work, and `saveDocument` reports the failed write when one happens.
  */
 export function browserStorage(): StorageLike | null {
   try {
-    const store = globalThis.localStorage;
-    // Availability is not the same as writability: a full quota fails only on write.
-    const probe = `${STORAGE_KEY}.probe`;
-    store.setItem(probe, '1');
-    store.removeItem(probe);
-    return store;
+    return globalThis.localStorage;
   } catch {
     return null;
   }

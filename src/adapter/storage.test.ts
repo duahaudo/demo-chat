@@ -137,7 +137,7 @@ describe('saveDocument', () => {
 });
 
 describe('browserStorage', () => {
-  it('returns the store when localStorage is usable, leaving no probe behind', () => {
+  it('returns the store when localStorage is usable, writing nothing', () => {
     const store = fakeStorage();
     vi.stubGlobal('localStorage', store);
 
@@ -145,16 +145,29 @@ describe('browserStorage', () => {
     expect(store.map.size).toBe(0);
   });
 
-  it('returns null when localStorage is present but cannot be written', () => {
-    vi.stubGlobal('localStorage', fakeStorage({}, { set: true }));
+  it('keeps a store whose writes fail, so a full quota still reads', () => {
+    const store = fakeStorage({}, { set: true });
+    vi.stubGlobal('localStorage', store);
 
-    expect(browserStorage()).toBeNull();
+    expect(browserStorage()).toBe(store);
   });
 
   it('returns null when reaching for localStorage throws', () => {
-    // Safari private mode and a blocked-cookies policy both throw on access itself.
-    vi.stubGlobal('localStorage', undefined);
+    // A blocked-cookies policy throws on the property access itself, before any method call, so
+    // this has to be a getter rather than a stubbed value.
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new Error('SecurityError');
+      },
+    });
 
-    expect(browserStorage()).toBeNull();
+    try {
+      expect(browserStorage()).toBeNull();
+    } finally {
+      if (original === undefined) delete (globalThis as Partial<typeof globalThis>).localStorage;
+      else Object.defineProperty(globalThis, 'localStorage', original);
+    }
   });
 });
