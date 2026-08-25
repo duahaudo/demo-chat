@@ -171,7 +171,7 @@ export default tseslint.config(
   // Config files run in Node and are outside the layer rules. They sit outside tsconfig's
   // `include`, so the type-aware rules have no program for them.
   {
-    files: ['**/*.js'],
+    files: ['**/*.js', '**/*.mjs'],
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: { globals: globals.node },
   },

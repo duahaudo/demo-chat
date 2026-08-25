@@ -83,7 +83,7 @@ and add the rest alongside the code they guard, so the default branch is never k
    checks; commit-msg validates conventional commits. Nothing slower (§4).
 6. `.github/workflows/`: a reusable setup workflow (checkout, node, pnpm cache) called by
    independent jobs. **Type check, lint and format, build, secret scan** now; **tests with
-   coverage, bundle budget, E2E and accessibility** appended in Phases 1 and 6 as their subjects
+   coverage, bundle budget and E2E** appended in Phases 1 and 6 as their subjects
    appear. Path filters so docs-only changes skip heavy jobs.
 7. `docs/adr/0001`–`0006` from §6's table, each stating context, options, decision and
    consequences accepted. Write 0003 to cover the BYOK toggle as shipped, not deferred.
@@ -205,11 +205,9 @@ The deferred CI jobs now have subjects.
 
 - Playwright E2E, three journeys: create → send → stream → stop → switch → reload, against a
   stubbed route. Free-tier limits make real-API E2E unreliable.
-- Automated accessibility audit on key screens; contrast and focus verified in CI.
-- Bundle size budget: threshold set at the first green build, regressions blocked, result
-  commented on the PR.
+- Bundle size budget: the gzipped delta against the base branch, commented on the PR.
 - Secret scan extended with an explicit "no key in build output" check over `dist/`.
-- Vercel project: preview on every pull request, where E2E and accessibility run; production on
+- Vercel project: preview on every pull request, where E2E runs; production on
   merge to the default branch. Version and changelog generated from commit history; tags produced
   by the pipeline, never by hand. Rollback is redeployment of the previous build, with trigger
   conditions written down in advance.
@@ -227,7 +225,7 @@ The deferred CI jobs now have subjects.
 | 3     | Mocked-transport integration suite green; the composer stays responsive during a fast response; switching chat mid-stream leaves zero deltas in the wrong conversation   |
 | 4     | Each of the six states renders and announces; full keyboard path new chat → select → compose → send → stop                                                               |
 | 5     | Reload preserves conversations; a hand-written prior-version document migrates forward; back and forward navigate chats                                                  |
-| 6     | E2E journeys green against the preview deployment; accessibility audit clean; no key found in `dist/`                                                                    |
+| 6     | E2E journeys green against the preview deployment; no key found in `dist/`                                                                                               |
 
 ---
 

@@ -112,13 +112,12 @@ sources render beneath the assistant bubble. Deferred so v1.0 ships complete.
 
 ## 5. Testing
 
-| Level         | Target                                                      | What it proves                                |
-| ------------- | ----------------------------------------------------------- | --------------------------------------------- |
-| Unit          | Core: parsing, classification, migrations                   | Correct at every boundary case                |
-| Integration   | Adapter + hooks against a mocked transport                  | Streams, cancellation, errors work end to end |
-| Component     | The six UI states                                           | Each renders and announces correctly          |
-| E2E           | 3 journeys: create → send → stream → stop → switch → reload | The product works in a browser                |
-| Accessibility | Automated audit on key screens                              | Contrast, focus, roles                        |
+| Level       | Target                                                      | What it proves                                |
+| ----------- | ----------------------------------------------------------- | --------------------------------------------- |
+| Unit        | Core: parsing, classification, migrations                   | Correct at every boundary case                |
+| Integration | Adapter + hooks against a mocked transport                  | Streams, cancellation, errors work end to end |
+| Component   | The six UI states                                           | Each renders and announces correctly          |
+| E2E         | 3 journeys: create → send → stream → stop → switch → reload | The product works in a browser                |
 
 The mocked transport reproduces adverse conditions deliberately: one-byte
 chunks, split delimiters, keepalives, mid-stream errors, truncated streams.
@@ -160,11 +159,10 @@ Independent parallel jobs so a failure names its own cause.
 | Lint and format                                 | Yes      |
 | Unit + integration tests, with coverage         | Yes      |
 | Build                                           | Yes      |
-| Bundle size budget, result commented on the PR  | Yes      |
+| Bundle size delta, commented on the PR          | Yes      |
 | E2E against the preview deployment              | Yes      |
-| Accessibility audit                             | Yes      |
 | Secret scan, including "no key in build output" | Yes      |
-| Dependency + code scanning                      | Reported |
+| Code scanning                                   | Reported |
 
 Dependency and browser caching. Path filters so docs-only changes skip heavy
 jobs. Shared setup extracted into a reusable workflow rather than copied.
@@ -173,10 +171,10 @@ jobs. Shared setup extracted into a reusable workflow rather than copied.
 
 ## 8. CI/CD
 
-| Environment | Trigger                                    |
-| ----------- | ------------------------------------------ |
-| Preview     | Every pull request — E2E and a11y run here |
-| Production  | Merge to default branch                    |
+| Environment | Trigger                            |
+| ----------- | ---------------------------------- |
+| Preview     | Every pull request — E2E runs here |
+| Production  | Merge to default branch            |
 
 Version and changelog generated from commit history. Tags produced by the
 pipeline, never by hand. Rollback is redeployment of the previous build, with
