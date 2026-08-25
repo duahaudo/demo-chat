@@ -4,14 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-**Phases 0-5 landed.** Repository, toolchain, lint zones, hooks, CI, ADRs; `src/core/` (SSE
+**Phases 0-6 landed.** Repository, toolchain, lint zones, hooks, CI, ADRs; `src/core/` (SSE
 framing, event classification, error classification and retry policy, storage schema and migration
 harness); `api/chat.ts` (the proxy, mounted locally by a Vite plugin); `src/adapter/`
 (`transport.ts`, `storage.ts`); `src/app/` (`useChatStream.ts`, `useConversations.ts` — persistence
 and routing behind the same surface); and `src/ui/` (`App`, `Transcript`, `MessageBubble`,
 `Composer`, `ChatListItem` — the six states, all under component test). Conversations persist to
 `localStorage`, are addressed by the URL fragment, and can be renamed inline or deleted with
-confirmation. All under test. `pnpm test:e2e` arrives with its subject in Phase 6.
+confirmation. All under test. Phase 6 added the remaining gates: Playwright journeys and an axe
+audit against the production build with `/api/chat` stubbed in the page (ADR-0008), the initial-JS
+budget in `bundle-budget.json`, the `dist/` secret scan, reported-only code and dependency
+scanning, release-please for version and tag, and the README.
 
 The three documents in `docs/` are the source of truth, not decoration. Read them before writing
 code; they specify behaviour at a level that determines implementation:
@@ -21,6 +24,7 @@ code; they specify behaviour at a level that determines implementation:
 | `docs/TECHNICAL-DESIGN.md` | Architecture, features, testing strategy, CI/CD, build order     |
 | `docs/DESIGN-SYSTEM.md`    | Tokens, components, the six required states, lint-enforced rules |
 | `docs/implement-plan.md`   | Phased execution plan with per-phase verification                |
+| `docs/deployment.md`       | Environments, variables, release, and the rollback triggers      |
 
 ## Commands
 
@@ -35,7 +39,8 @@ pnpm test            # Vitest, run once
 pnpm test <pattern>  # single file, e.g. pnpm test sse
 pnpm test:watch      # Vitest, watching
 pnpm test:coverage   # thresholds on core/ and adapter/ only (ADR-0005)
-pnpm test:e2e        # Playwright  — added in Phase 6
+pnpm test:e2e        # Playwright journeys; --grep @a11y for the accessibility audit alone
+pnpm bundle:budget   # initial JS against bundle-budget.json, after a build
 ```
 
 Package manager is pnpm. Node version pinned in `.nvmrc`.

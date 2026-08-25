@@ -222,7 +222,7 @@ export function App() {
           </Text>
         )}
 
-        <Box flex="1" overflowY="auto" paddingX="4">
+        <Box as="main" flex="1" overflowY="auto" paddingX="4">
           <Box maxWidth="3xl" marginX="auto">
             <Transcript
               messages={selected?.messages ?? []}

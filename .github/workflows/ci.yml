@@ -76,6 +76,62 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm build
 
+  e2e:
+    name: E2E journeys
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/playwright
+      - run: pnpm test:e2e --grep-invert @a11y
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-e2e
+          path: playwright-report
+          if-no-files-found: ignore
+
+  a11y:
+    name: Accessibility audit
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/playwright
+      - run: pnpm test:e2e --grep @a11y
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-a11y
+          path: playwright-report
+          if-no-files-found: ignore
+
+  bundle:
+    name: Bundle size budget
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm exec vite build
+      - run: |
+          set -o pipefail
+          pnpm --silent bundle:budget | tee bundle-report.md
+      # The result is on the pull request either way — a regression is easier to read next to the
+      # diff that caused it than in a job log.
+      - if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment ${{ github.event.number }} --body-file bundle-report.md --edit-last --create-if-none
+
   commits:
     name: Conventional commits
     if: github.event_name == 'pull_request'
@@ -86,6 +142,3 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup
       - run: pnpm exec commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
-
-# Bundle budget, E2E and accessibility are added in Phase 6, alongside the code they guard, so the
-# default branch is never knowingly red (implement-plan §4).

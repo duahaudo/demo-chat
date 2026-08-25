@@ -1,0 +1,22 @@
+name: Release
+
+# Version, changelog and tag come from the commit history (TECHNICAL-DESIGN §8). Nothing here is
+# ever done by hand: release-please opens a release pull request, and merging it cuts the tag.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Release please
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          release-type: node
