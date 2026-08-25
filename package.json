@@ -19,8 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test",
-    "bundle:budget": "node scripts/bundle-budget.mjs"
+    "test:e2e": "playwright test"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

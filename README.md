@@ -43,7 +43,6 @@ pnpm format          # prettier --check .  (format:write to fix)
 pnpm test            # Vitest: unit, integration and component
 pnpm test:coverage   # thresholds on core/ and adapter/ (ADR-0005)
 pnpm test:e2e        # Playwright journeys
-pnpm bundle:budget   # initial JS against bundle-budget.json, after a build
 ```
 
 ## Architecture
@@ -81,7 +80,7 @@ non-deterministic, to drive a test suite.
 ## Pipeline
 
 Independent jobs, so a failure names its own cause: type check, lint and format, unit tests with
-coverage, build, bundle budget (commented on the pull request), E2E, secret
+coverage, build, bundle size delta (commented on the pull request), E2E, secret
 scan including "no key in build output", and reported-only code and dependency scanning. Docs-only
 changes skip the heavy jobs.
 

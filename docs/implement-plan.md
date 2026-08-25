@@ -205,8 +205,7 @@ The deferred CI jobs now have subjects.
 
 - Playwright E2E, three journeys: create → send → stream → stop → switch → reload, against a
   stubbed route. Free-tier limits make real-API E2E unreliable.
-- Bundle size budget: threshold set at the first green build, regressions blocked, result
-  commented on the PR.
+- Bundle size budget: the gzipped delta against the base branch, commented on the PR.
 - Secret scan extended with an explicit "no key in build output" check over `dist/`.
 - Vercel project: preview on every pull request, where E2E runs; production on
   merge to the default branch. Version and changelog generated from commit history; tags produced

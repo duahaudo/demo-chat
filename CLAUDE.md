@@ -12,8 +12,8 @@ and routing behind the same surface); and `src/ui/` (`App`, `Transcript`, `Messa
 `Composer`, `ChatListItem` — the six states, all under component test). Conversations persist to
 `localStorage`, are addressed by the URL fragment, and can be renamed inline or deleted with
 confirmation. All under test. Phase 6 added the remaining gates: Playwright journeys against the
-production build with `/api/chat` stubbed in the page (ADR-0008), the initial-JS budget in
-`bundle-budget.json`, the `dist/` secret scan, reported-only code and dependency scanning,
+production build with `/api/chat` stubbed in the page (ADR-0008), the gzip bundle-size delta
+commented on every pull request, the `dist/` secret scan, reported-only code and dependency scanning,
 release-please for version and tag, and the README.
 
 The three documents in `docs/` are the source of truth, not decoration. Read them before writing
@@ -40,7 +40,6 @@ pnpm test <pattern>  # single file, e.g. pnpm test sse
 pnpm test:watch      # Vitest, watching
 pnpm test:coverage   # thresholds on core/ and adapter/ only (ADR-0005)
 pnpm test:e2e        # Playwright journeys
-pnpm bundle:budget   # initial JS against bundle-budget.json, after a build
 ```
 
 Package manager is pnpm. Node version pinned in `.nvmrc`.

@@ -96,7 +96,7 @@ jobs:
   bundle:
     name: Bundle size budget
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -104,16 +104,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - run: pnpm exec vite build
-      - run: |
-          set -o pipefail
-          pnpm --silent bundle:budget | tee bundle-report.md
-      # The result is on the pull request either way — a regression is easier to read next to the
-      # diff that caused it than in a job log.
-      - if: always() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh pr comment ${{ github.event.number }} --body-file bundle-report.md --edit-last --create-if-none
+      # Builds the base branch as well and comments the gzip delta, so there is no absolute
+      # threshold to maintain and a regression is read next to the diff that caused it.
+      - uses: preactjs/compressed-size-action@v2
+        with:
+          pattern: 'dist/assets/**/*.js'
+          strip-hash: '\-([\w-]{8})\.'
+          minimum-change-threshold: 500
 
   commits:
     name: Conventional commits
