@@ -81,7 +81,7 @@ non-deterministic, to drive a test suite.
 
 Independent jobs, so a failure names its own cause: type check, lint and format, unit tests with
 coverage, build, bundle size delta (commented on the pull request), E2E, secret
-scan including "no key in build output", and reported-only code and dependency scanning. Docs-only
+scan including "no key in build output", and reported-only code scanning. Docs-only
 changes skip the heavy jobs.
 
 Preview deploys on every pull request, production on merge to `main`; version, changelog and tag

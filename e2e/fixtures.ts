@@ -1,13 +1,10 @@
 import { test as base } from '@playwright/test';
 
 /**
- * The stub the journeys run against. Installed as an init script, so it must be self-contained —
- * it is serialised into the page, not imported there.
- *
- * It answers `/api/chat` with real SSE bytes over a live `ReadableStream`, which is what makes
- * the streaming, stop and failure journeys observable: the stream stays open until the tokens run
- * out or the request is aborted. The message text selects the behaviour, so a test steers it by
- * typing: "slow" streams long enough to interrupt, "fail" is rejected on its first attempt only.
+ * Stub for `/api/chat`, installed as an init script — serialised into the page, so it must be
+ * self-contained. It answers with real SSE bytes over a live `ReadableStream` so streaming, stop
+ * and failure stay observable. The message text selects the behaviour: "slow" streams long enough
+ * to interrupt, "fail" is rejected on its first attempt only.
  */
 function installChatStub(): void {
   const state = window as unknown as { __chatAttempts?: number };

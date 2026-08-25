@@ -13,7 +13,7 @@ and routing behind the same surface); and `src/ui/` (`App`, `Transcript`, `Messa
 `localStorage`, are addressed by the URL fragment, and can be renamed inline or deleted with
 confirmation. All under test. Phase 6 added the remaining gates: Playwright journeys against the
 production build with `/api/chat` stubbed in the page (ADR-0008), the gzip bundle-size delta
-commented on every pull request, the `dist/` secret scan, reported-only code and dependency scanning,
+commented on every pull request, the `dist/` secret scan, reported-only code scanning,
 release-please for version and tag, and the README.
 
 The three documents in `docs/` are the source of truth, not decoration. Read them before writing

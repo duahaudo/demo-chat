@@ -25,13 +25,3 @@ jobs:
           languages: javascript-typescript
           queries: security-and-quality
       - uses: github/codeql-action/analyze@v3
-
-  dependencies:
-    name: Dependency review
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: high

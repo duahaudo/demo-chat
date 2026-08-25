@@ -162,7 +162,7 @@ Independent parallel jobs so a failure names its own cause.
 | Bundle size delta, commented on the PR          | Yes      |
 | E2E against the preview deployment              | Yes      |
 | Secret scan, including "no key in build output" | Yes      |
-| Dependency + code scanning                      | Reported |
+| Code scanning                                   | Reported |
 
 Dependency and browser caching. Path filters so docs-only changes skip heavy
 jobs. Shared setup extracted into a reusable workflow rather than copied.
