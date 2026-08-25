@@ -50,7 +50,6 @@ export function Transcript(props: TranscriptProps) {
       {status === 'loading' ? (
         <Stack direction="row" align="center" gap="2" role="status">
           <Spinner size="sm" />
-          <Text color="fg.muted">Waiting for the first token.</Text>
         </Stack>
       ) : null}
 
