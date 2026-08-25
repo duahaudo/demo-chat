@@ -108,6 +108,9 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       ...jsxA11y.flatConfigs.recommended.rules,
       ...designSystemRules,
+      // Chakra's components and ours are capitalised, so jsx-a11y cannot tell an ARIA `role` from
+      // a prop that happens to be called one. Real DOM elements are still checked.
+      'jsx-a11y/aria-role': ['error', { ignoreNonDOM: true }],
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       'no-restricted-globals': [
         'error',
@@ -128,6 +131,13 @@ export default tseslint.config(
         },
       ],
     },
+  },
+
+  // Test files export fixtures and helpers, not components, and are never hot-reloaded.
+  {
+    files: ['**/*.test.{ts,tsx}', 'src/ui/test-utils.tsx'],
+    plugins: { 'react-refresh': reactRefresh },
+    rules: { 'react-refresh/only-export-components': 'off' },
   },
 
   // Core is pure: no framework, no I/O, no clock (TECHNICAL-DESIGN §2).
