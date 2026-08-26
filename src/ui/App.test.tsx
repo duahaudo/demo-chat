@@ -153,3 +153,46 @@ describe('App — chat management', () => {
     expect(window.location.hash).toBe(url);
   });
 });
+
+describe('App — following the stream', () => {
+  /** jsdom lays nothing out, so the viewport's geometry has to be staged by hand. */
+  const stageViewport = () => {
+    const viewport = screen.getByRole('main');
+    Object.defineProperty(viewport, 'clientHeight', { configurable: true, value: 100 });
+    Object.defineProperty(viewport, 'scrollHeight', { configurable: true, value: 1000 });
+    return viewport;
+  };
+
+  it('follows the tail while streaming, and stops once the reader scrolls up', async () => {
+    let emit: ((text: string) => void) | undefined;
+    streamChat.mockImplementation(async function* () {
+      const queue: string[] = [];
+      emit = (text) => queue.push(text);
+      for (let sent = 0; sent < 2;) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        while (queue.length > 0) {
+          sent += 1;
+          yield { kind: 'delta', text: queue.shift()! };
+        }
+      }
+      yield { kind: 'done' };
+    });
+
+    renderUi(<App />);
+    const viewport = stageViewport();
+
+    fireEvent.change(field(), { target: { value: 'Explain SSE' } });
+    fireEvent.keyDown(field(), { key: 'Enter' });
+    await waitFor(() => expect(emit).toBeDefined());
+
+    emit!('a stream that runs below the fold');
+    await waitFor(() => expect(viewport.scrollTop).toBe(1000));
+
+    // Reading back through the transcript takes the view off the bottom; the next delta leaves it.
+    viewport.scrollTop = 0;
+    fireEvent.scroll(viewport);
+    emit!(' and keeps going');
+    await waitFor(() => expect(screen.getByRole('main').textContent).toContain('keeps going'));
+    expect(viewport.scrollTop).toBe(0);
+  });
+});
