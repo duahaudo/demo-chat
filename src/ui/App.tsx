@@ -41,6 +41,18 @@ export function App() {
 
   const busy = status === 'loading' || status === 'streaming';
 
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const stickRef = useRef(true);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (viewport !== null && stickRef.current) viewport.scrollTop = viewport.scrollHeight;
+  }, [selectedId, selected?.messages.length, text, status]);
+
+  useEffect(() => {
+    stickRef.current = true;
+  }, [selectedId]);
+
   // The field is disabled while streaming, so it loses focus; take it back once it settles, and on
   // every chat switch or new chat.
   useEffect(() => {
@@ -75,6 +87,8 @@ export function App() {
         status: 'complete',
       };
 
+      stickRef.current = true;
+
       const history = [...(selected?.messages ?? []), ...(tail === null ? [] : [tail]), user];
       if (tail !== null) append(selectedId, tail);
       append(selectedId, user);
@@ -89,6 +103,7 @@ export function App() {
   );
 
   const handleRetry = useCallback(() => {
+    stickRef.current = true;
     const tail = foldTail();
     if (tail !== null) append(selectedId, tail);
     void send(lastSentRef.current);
@@ -222,7 +237,18 @@ export function App() {
           </Text>
         )}
 
-        <Box as="main" flex="1" overflowY="auto" paddingX="4">
+        <Box
+          as="main"
+          ref={viewportRef}
+          flex="1"
+          overflowY="auto"
+          paddingX="4"
+          onScroll={(event) => {
+            const viewport = event.currentTarget;
+            stickRef.current =
+              viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 32;
+          }}
+        >
           <Box maxWidth="3xl" marginX="auto">
             <Transcript
               messages={selected?.messages ?? []}
