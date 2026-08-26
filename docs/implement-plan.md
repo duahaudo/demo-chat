@@ -101,9 +101,9 @@ here, and it is testable without a browser or a single mock.
 
 - **`sse.ts`** — `createSseBuffer()` with `push(chunk) => Frame[]` and `flush() => Frame[]`.
   Handles a frame or delimiter split across reads, a carriage return at a read boundary treated as
-  one line break, comment frames emitted as a distinct kind, and a terminal flush for a stream
+  one line break, comment frames dropped at the framing layer, and a terminal flush for a stream
   that ends without its final delimiter. Never fabricates a boundary.
-- **`events.ts`** — `classifyEvent(frame)` returning `delta | done | keepalive | error | malformed`.
+- **`events.ts`** — `classifyEvent(payload)` returning `delta | done | error | malformed`.
   Covers the `[DONE]` sentinel, a top-level `error` field, and `finish_reason: "error"`. Malformed
   JSON emits an error event and the stream survives.
 - **`errors.ts`** — `classifyError` returning `transient` (auto-retry, bounded, backoff with

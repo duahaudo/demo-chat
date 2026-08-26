@@ -149,8 +149,8 @@ export function useChatStream(options: UseChatStreamOptions): ChatStream {
             }
             continue;
           }
-          // A keepalive is not content, and one unreadable frame does not end a healthy stream.
-          if (event.kind === 'keepalive' || event.kind === 'malformed') continue;
+          // One unreadable frame does not end a healthy stream.
+          if (event.kind === 'malformed') continue;
           if (event.kind === 'done') break;
 
           failure = event.kind === 'error' ? classifyStreamError(event.error) : event.error;
