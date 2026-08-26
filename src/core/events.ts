@@ -6,13 +6,10 @@
  *
  * OpenRouter specifics this covers (all confirmed against the live API):
  * - `data: [DONE]` sentinel closes the stream.
- * - `: OPENROUTER PROCESSING` comment frames are keepalives and are never rendered.
  * - Mid-stream failures arrive under HTTP 200 as a top-level `error` field, alongside
  *   `finish_reason: "error"`.
  * - A malformed payload is reported, not thrown: the stream survives it.
  */
-
-import type { Frame } from './sse';
 
 /** Why the model stopped. Passed through verbatim; the listed values are the common ones. */
 export type FinishReason = 'stop' | 'length' | 'content_filter' | 'tool_calls' | (string & {});
@@ -29,8 +26,6 @@ export type StreamEvent =
   | { readonly kind: 'delta'; readonly text: string }
   /** The stream is over: either the `[DONE]` sentinel or a terminal `finish_reason`. */
   | { readonly kind: 'done'; readonly reason: 'sentinel' | FinishReason }
-  /** A comment frame. Ignore it; never render it. */
-  | { readonly kind: 'keepalive' }
   /** The provider reported a failure inside the stream. */
   | { readonly kind: 'error'; readonly error: StreamErrorPayload }
   /** The payload could not be understood. The stream survives; surface and continue. */
@@ -61,16 +56,13 @@ function readError(value: unknown): StreamErrorPayload {
 }
 
 /**
- * Classify a single frame.
+ * Classify one frame's payload.
  *
  * Total: every frame produces exactly one event, and nothing throws — a payload this function
  * cannot read becomes `malformed` rather than an exception, because one bad frame must not end an
  * otherwise healthy stream (TECHNICAL-DESIGN §3.3).
  */
-export function classifyEvent(frame: Frame): StreamEvent {
-  if (frame.kind === 'comment') return { kind: 'keepalive' };
-
-  const raw = frame.data;
+export function classifyEvent(raw: string): StreamEvent {
   if (raw.trim() === DONE_SENTINEL) return { kind: 'done', reason: 'sentinel' };
 
   let payload: unknown;

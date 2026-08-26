@@ -97,12 +97,12 @@ export async function* streamChat(options: StreamChatOptions): AsyncGenerator<Tr
 
       if (done) {
         // For a server that closed without its final delimiter.
-        for (const frame of buffer.flush()) yield classifyEvent(frame);
+        for (const raw of buffer.flush()) yield classifyEvent(raw);
         return;
       }
 
-      for (const frame of buffer.push(value)) {
-        const event = classifyEvent(frame);
+      for (const raw of buffer.push(value)) {
+        const event = classifyEvent(raw);
         yield event;
         if (event.kind === 'done') return;
       }

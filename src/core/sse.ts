@@ -10,34 +10,27 @@
  * upstream by `TextDecoderStream` before it gets here.
  */
 
-/** One dispatched SSE frame. Comments are kept as a distinct kind rather than dropped. */
-export type Frame =
-  /** A frame carrying one or more `data:` fields, joined with `\n` as the spec requires. */
-  | { readonly kind: 'data'; readonly data: string }
-  /** A comment line (`: keepalive`). OpenRouter sends `: OPENROUTER PROCESSING`. */
-  | { readonly kind: 'comment'; readonly text: string };
-
 export interface SseBuffer {
   /**
-   * Feed one decoded chunk. Returns every frame completed by this chunk, in arrival order —
-   * empty when the chunk ended mid-frame.
+   * Feed one decoded chunk. Returns the payload of every frame completed by this chunk, in
+   * arrival order — empty when the chunk ended mid-frame.
    */
-  push(chunk: string): Frame[];
+  push(chunk: string): string[];
   /**
    * End of stream. Emits a frame still held in the buffer, for servers that close without the
    * final blank-line delimiter. Returns `[]` when the buffer is empty. Idempotent.
    */
-  flush(): Frame[];
+  flush(): string[];
 }
 
-/** A line terminator is `\r\n`, `\n` or a lone `\r` (WHATWG event-stream parsing). */
 interface Scan {
   readonly lines: string[];
   readonly rest: string;
 }
 
 /**
- * Split off complete lines, leaving the incomplete tail in `rest`.
+ * Split off complete lines, leaving the incomplete tail in `rest`. A line terminator is `\r\n`,
+ * `\n` or a lone `\r` (WHATWG event-stream parsing).
  *
  * A `\r` at the very end of a chunk is ambiguous — the next read may start with `\n`, which would
  * make it one line break rather than two. Unless `atEnd` is set, it stays in `rest`.
@@ -71,56 +64,38 @@ function scanLines(buffer: string, atEnd: boolean): Scan {
   return { lines, rest: buffer.slice(start) };
 }
 
-/** Strip the field name and, per the spec, a single leading space from the value. */
-function fieldValue(line: string, colon: number): string {
-  const raw = line.slice(colon + 1);
-  return raw.startsWith(' ') ? raw.slice(1) : raw;
-}
-
 export function createSseBuffer(): SseBuffer {
   /** Bytes seen but not yet terminated by a line break. */
   let rest = '';
-  /** Comment frames of the frame currently being assembled, in arrival order. */
-  let comments: string[] = [];
   /** `data:` values of the frame currently being assembled. */
   let data: string[] = [];
-  /** Whether the current frame has seen any line at all, so a lone delimiter dispatches nothing. */
-  let started = false;
 
-  /** Dispatch the assembled frame, if it holds anything, and reset. */
-  function dispatch(out: Frame[]): void {
-    for (const text of comments) out.push({ kind: 'comment', text });
-    if (data.length > 0) out.push({ kind: 'data', data: data.join('\n') });
-    comments = [];
+  /** Dispatch the assembled frame, if it holds anything, and reset. A no-op when it is empty. */
+  function dispatch(out: string[]): void {
+    if (data.length > 0) out.push(data.join('\n')); // the spec joins repeated `data:` fields
     data = [];
-    started = false;
   }
 
-  function consume(line: string, out: Frame[]): void {
+  function consume(line: string, out: string[]): void {
     if (line === '') {
-      if (started) dispatch(out);
+      dispatch(out);
       return;
     }
 
-    started = true;
+    // Comment lines (OpenRouter's `: OPENROUTER PROCESSING` keepalive) and fields other than
+    // `data` — `event`, `id`, `retry`, anything unknown — are dropped by design: OpenRouter
+    // carries everything this product needs in the data payload.
     const colon = line.indexOf(':');
+    if (colon === 0) return;
+    if ((colon === -1 ? line : line.slice(0, colon)) !== 'data') return;
 
-    if (colon === 0) {
-      comments.push(fieldValue(line, 0));
-      return;
-    }
-
-    // Fields other than `data` (`event`, `id`, `retry`, anything unknown) are ignored by design:
-    // OpenRouter carries everything this product needs in the data payload.
-    const name = colon === -1 ? line : line.slice(0, colon);
-    if (name === 'data') data.push(colon === -1 ? '' : fieldValue(line, colon));
+    const value = colon === -1 ? '' : line.slice(colon + 1);
+    data.push(value.startsWith(' ') ? value.slice(1) : value); // one leading space, per the spec
   }
 
   return {
     push(chunk) {
-      if (chunk === '') return [];
-
-      const out: Frame[] = [];
+      const out: string[] = [];
       const scan = scanLines(rest + chunk, false);
       rest = scan.rest;
       for (const line of scan.lines) consume(line, out);
@@ -128,7 +103,7 @@ export function createSseBuffer(): SseBuffer {
     },
 
     flush() {
-      const out: Frame[] = [];
+      const out: string[] = [];
 
       if (rest !== '') {
         const scan = scanLines(rest, true); // a held `\r` is now unambiguously a terminator
@@ -137,7 +112,7 @@ export function createSseBuffer(): SseBuffer {
         if (scan.rest !== '') consume(scan.rest, out); // final line, unterminated
       }
 
-      if (started) dispatch(out);
+      dispatch(out);
       return out;
     },
   };

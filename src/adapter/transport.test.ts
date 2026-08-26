@@ -78,7 +78,6 @@ describe('streamChat — happy path', () => {
 
     expect(text(events)).toBe('Hello');
     expect(events.at(-1)).toEqual({ kind: 'done', reason: 'sentinel' });
-    expect(events.filter((e) => e.kind === 'keepalive')).toHaveLength(1);
   });
 
   it('yields the same deltas when the body arrives one byte at a time', async () => {

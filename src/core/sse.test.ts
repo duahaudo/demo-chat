@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createSseBuffer, type Frame } from './sse';
+import { createSseBuffer } from './sse';
 
 /**
  * Deterministic split points. `Math.random` is banned in core and would make a failure
@@ -15,9 +15,9 @@ function splitter(seed: number): () => number {
 }
 
 /** Feed a whole stream through the buffer in the given chunks, ending with a flush. */
-function drain(chunks: readonly string[]): Frame[] {
+function drain(chunks: readonly string[]): string[] {
   const buffer = createSseBuffer();
-  const frames: Frame[] = [];
+  const frames: string[] = [];
   for (const chunk of chunks) frames.push(...buffer.push(chunk));
   frames.push(...buffer.flush());
   return frames;
@@ -45,11 +45,10 @@ const STREAM =
   'data: {"choices":[{"delta":{"content":"llo"}}]}\n\n' +
   'data: [DONE]\n\n';
 
-const EXPECTED: Frame[] = [
-  { kind: 'comment', text: 'OPENROUTER PROCESSING' },
-  { kind: 'data', data: '{"choices":[{"delta":{"content":"He"}}]}' },
-  { kind: 'data', data: '{"choices":[{"delta":{"content":"llo"}}]}' },
-  { kind: 'data', data: '[DONE]' },
+const EXPECTED: string[] = [
+  '{"choices":[{"delta":{"content":"He"}}]}',
+  '{"choices":[{"delta":{"content":"llo"}}]}',
+  '[DONE]',
 ];
 
 describe('createSseBuffer', () => {
@@ -73,78 +72,69 @@ describe('createSseBuffer', () => {
     expect(buffer.push('data: {"choices":')).toEqual([]);
     expect(buffer.push('[{"delta":{"content":"x"}}]}')).toEqual([]);
     expect(buffer.push('\n')).toEqual([]);
-    expect(buffer.push('\n')).toEqual([
-      { kind: 'data', data: '{"choices":[{"delta":{"content":"x"}}]}' },
-    ]);
+    expect(buffer.push('\n')).toEqual(['{"choices":[{"delta":{"content":"x"}}]}']);
   });
 
   it('treats a carriage return split across reads as one line break', () => {
     const buffer = createSseBuffer();
     expect(buffer.push('data: hi\r')).toEqual([]); // ambiguous: \r or the start of \r\n
-    expect(buffer.push('\n\r\n')).toEqual([{ kind: 'data', data: 'hi' }]);
+    expect(buffer.push('\n\r\n')).toEqual(['hi']);
     expect(buffer.flush()).toEqual([]);
   });
 
   it('accepts a lone carriage return as a terminator', () => {
-    expect(drain(['data: hi\r\rdata: there\r\r'])).toEqual([
-      { kind: 'data', data: 'hi' },
-      { kind: 'data', data: 'there' },
-    ]);
+    expect(drain(['data: hi\r\rdata: there\r\r'])).toEqual(['hi', 'there']);
   });
 
   it('flushes a stream that ends without its final delimiter', () => {
-    expect(drain(['data: {"choices":[]}'])).toEqual([{ kind: 'data', data: '{"choices":[]}' }]);
+    expect(drain(['data: {"choices":[]}'])).toEqual(['{"choices":[]}']);
   });
 
   it('flushes a stream whose last line is terminated but not delimited', () => {
-    expect(drain(['data: [DONE]\n'])).toEqual([{ kind: 'data', data: '[DONE]' }]);
+    expect(drain(['data: [DONE]\n'])).toEqual(['[DONE]']);
   });
 
   it('is idempotent on flush and safe to over-flush', () => {
     const buffer = createSseBuffer();
     buffer.push('data: tail');
-    expect(buffer.flush()).toEqual([{ kind: 'data', data: 'tail' }]);
+    expect(buffer.flush()).toEqual(['tail']);
     expect(buffer.flush()).toEqual([]);
   });
 
   it('joins multiple data fields in one frame with a newline', () => {
-    expect(drain(['data: one\ndata: two\n\n'])).toEqual([{ kind: 'data', data: 'one\ntwo' }]);
+    expect(drain(['data: one\ndata: two\n\n'])).toEqual(['one\ntwo']);
   });
 
-  it('keeps comments as their own kind and never merges them into data', () => {
-    expect(drain([': keepalive\ndata: payload\n\n'])).toEqual([
-      { kind: 'comment', text: 'keepalive' },
-      { kind: 'data', data: 'payload' },
-    ]);
+  it('drops comment lines and never merges them into data', () => {
+    expect(drain([': keepalive\ndata: payload\n\n'])).toEqual(['payload']);
   });
 
   it('strips exactly one leading space from a field value', () => {
-    expect(drain(['data:  padded\n\n'])).toEqual([{ kind: 'data', data: ' padded' }]);
-    expect(drain(['data:tight\n\n'])).toEqual([{ kind: 'data', data: 'tight' }]);
+    expect(drain(['data:  padded\n\n'])).toEqual([' padded']);
+    expect(drain(['data:tight\n\n'])).toEqual(['tight']);
   });
 
   it('reads a data field with no colon as an empty value', () => {
-    expect(drain(['data\n\n'])).toEqual([{ kind: 'data', data: '' }]);
+    expect(drain(['data\n\n'])).toEqual(['']);
   });
 
   it('ignores fields the product does not use', () => {
-    expect(drain(['event: message\nid: 7\nretry: 1000\ndata: kept\n\n'])).toEqual([
-      { kind: 'data', data: 'kept' },
-    ]);
+    expect(drain(['event: message\nid: 7\nretry: 1000\ndata: kept\n\n'])).toEqual(['kept']);
   });
 
   it('dispatches nothing for blank lines between frames', () => {
-    expect(drain(['\n\n\ndata: x\n\n\n\n'])).toEqual([{ kind: 'data', data: 'x' }]);
+    expect(drain(['\n\n\ndata: x\n\n\n\n'])).toEqual(['x']);
   });
 
   it('ignores an empty chunk', () => {
     const buffer = createSseBuffer();
     expect(buffer.push('')).toEqual([]);
-    expect(buffer.push('data: x\n\n')).toEqual([{ kind: 'data', data: 'x' }]);
+    expect(buffer.push('data: x\n\n')).toEqual(['x']);
   });
 
   it('preserves a payload containing a blank line inside its JSON string', () => {
-    const frames = drain(['data: {"text":"line one\\n\\nline two"}\n\n']);
-    expect(frames).toEqual([{ kind: 'data', data: '{"text":"line one\\n\\nline two"}' }]);
+    expect(drain(['data: {"text":"line one\\n\\nline two"}\n\n'])).toEqual([
+      '{"text":"line one\\n\\nline two"}',
+    ]);
   });
 });
